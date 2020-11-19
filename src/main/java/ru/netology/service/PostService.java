@@ -1,14 +1,13 @@
 package ru.netology.service;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import ru.netology.exception.NotFoundException;
 import ru.netology.model.Post;
 import ru.netology.repository.PostRepository;
-
-import java.util.List;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
-@Component
+@Service
 public class PostService {
   private final PostRepository repository;
 
@@ -17,19 +16,26 @@ public class PostService {
   }
 
   public ConcurrentMap<Long,Post> all() {
-    return repository.all();
+    ConcurrentMap<Long,Post> resultMap = repository.all().entrySet().stream()
+            .filter(value -> value.getValue().isAlive())
+            .collect(Collectors.toConcurrentMap(value -> value.getKey(), value -> value.getValue()));
+    return resultMap;
   }
 
   public Post getById(long id) {
-    return repository.getById(id).orElseThrow(NotFoundException::new);
+    Post result = repository.getById(id).orElseThrow(NotFoundException::new);
+    if (!result.isAlive()) throw new NotFoundException();
+    return result;
   }
 
   public Post save(Post post) {
-    return repository.save(post);
+    Post result = repository.save(post);
+    if (!result.isAlive()) throw new NotFoundException();
+    return result;
   }
 
   public void removeById(long id) {
-    repository.removeById(id);
+    if (!repository.removeById(id)) throw new NotFoundException();
   }
 }
 

@@ -1,48 +1,47 @@
 package ru.netology.controller;
 
-import com.google.gson.Gson;
-import org.springframework.stereotype.Component;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 import ru.netology.model.Post;
 import ru.netology.service.PostService;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.Reader;
+import java.util.concurrent.ConcurrentMap;
 
-@Component
+@RestController
+@RequestMapping("/api/posts")
 public class PostController {
-  public static final String APPLICATION_JSON = "application/json";
   private final PostService service;
-  private final Gson gson;
 
   public PostController(PostService service) {
     this.service = service;
-    this.gson = new Gson();
   }
 
-  public void all(HttpServletResponse response) throws IOException {
-    response.setContentType(APPLICATION_JSON);
-    final var data = service.all();
-    response.getWriter().print(gson.toJson(data));
+  @ResponseStatus(HttpStatus.OK)
+  @GetMapping
+  public ConcurrentMap<Long, Post> all() throws IOException {
+    return service.all();
   }
 
-  public void getById(long id, HttpServletResponse response) throws IOException {
-    response.setContentType(APPLICATION_JSON);
-    final var data = service.getById(id);
-    response.getWriter().print(gson.toJson(data));
+  @ResponseStatus(HttpStatus.OK)
+  @GetMapping("/{id}")
+  public Post getById(@PathVariable long id) throws IOException {
+    return service.getById(id);
   }
 
-  public void save(Reader body, HttpServletResponse response) throws IOException {
-    response.setContentType(APPLICATION_JSON);
-    final var post = gson.fromJson(body, Post.class);
-    final var data = service.save(post);
-    response.getWriter().print(gson.toJson(data));
+  @ResponseStatus(HttpStatus.CREATED)
+  @PostMapping
+  public ResponseEntity<Post> save(@RequestBody Post post, UriComponentsBuilder componentsBuilder) throws IOException {
+    Post result = service.save(post);
+    var uri = componentsBuilder.path("/api/posts" + result.getId()).build().toUri();
+    return ResponseEntity.created(uri).body(result);
   }
 
-  public void removeById(long id, HttpServletResponse response) throws IOException {
-    response.setContentType(APPLICATION_JSON);
-    final var data = service.getById(id);
+  @ResponseStatus(HttpStatus.OK)
+  @DeleteMapping("/{id}")
+  public void removeById(@PathVariable long id) throws IOException {
     service.removeById(id);
-    response.getWriter().print(gson.toJson(data));
   }
 }
